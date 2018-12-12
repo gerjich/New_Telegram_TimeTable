@@ -13,9 +13,7 @@ public class Bot extends TelegramLongPollingBot {
     public Bot() {
     }
 
-    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
-    Map<String, String> oneStringCommands = new HashMap<>();
-
+    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание
 
 
     public Bot(DefaultBotOptions options) {
@@ -69,7 +67,6 @@ public class Bot extends TelegramLongPollingBot {
             }
             if (text == null)
                 text = "Are you sure?";
-            String[] lines = text.split("&");
             sendMsg(message, text);
         }
 

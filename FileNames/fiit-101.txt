@@ -1,2 +1,2 @@
-monday
-rest for fiit-101
+/monday
+/rest for fiit-101

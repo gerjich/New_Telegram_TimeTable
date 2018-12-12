@@ -1,2 +1,6 @@
-help
-My name ChatBot! I am here to remind you about your timetable. Enter the day of the week and get your classes P.S write: help - to repeat this text
+/help
+/My name ChatBot! 
+I am here to remind you about your timetable. 
+Enter the day of the week and get your classes 
+P.S write: 
+"/help" - to repeat this text

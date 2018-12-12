@@ -13,8 +13,20 @@ public class Read {
         try (FileReader fr = new FileReader(fileName);
              Scanner scan = new Scanner(fr))
         {
+            String[] Arr = new String[14];
+            int c = 0;
             while (scan.hasNextLine()) {
-                dict.put(scan.nextLine(),scan.nextLine());
+                String text = scan.nextLine();
+                if (text.substring(0,1).equals("/")) {
+                    Arr[c] = text.substring(1);
+                    c++;
+                }
+                else {
+                    Arr[c - 1] += "\n" + text;
+                }
+            }
+            for (int i = 0; i<Arr.length/2; i++){
+                dict.put(Arr[i*2], Arr[i*2+1]);
             }
         }
         catch (Exception ex){
