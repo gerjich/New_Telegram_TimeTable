@@ -27,7 +27,7 @@ public class Bot extends TelegramLongPollingBot {
         super(options);
         Read read = new Read();
         groupDict = read.read();
-        week.addAll(Arrays.asList("monday", "tuesday", "wednesday" ));
+        week.addAll(Arrays.asList("monday", "tuesday", "wednesday", "thursday", "friday", "sunday"));
     }
 
     public void sendMsg(Message message, String text){
@@ -71,22 +71,22 @@ public class Bot extends TelegramLongPollingBot {
             if (groupDict.get("commands").containsKey(instructions[0].substring(1))){
                 text = groupDict.get("commands").get(instructions[0].substring(1));
             }
-            else if (Pattern.matches("^/\\D+-\\d+$",instructions[0])) {
+            else if (isGroup(instructions[0])) {
                 group = instructions[0].substring(1);
                 if (day == null ) {
                     text = "Enter the day of week";
                 }
                 else {
-                    if (instructions.length == 2) {
+                    if (instructions.length == 2 && isDay(instructions[1])) {
                         day = instructions[1];
                     }
                 }
-            }else {
+            }else if (isDay(instructions[0])){
                 day = instructions[0].substring(1);
                 if (group == null) {
                     text = "Enter the group";
                 } else {
-                    if (instructions.length == 2) {
+                    if (instructions.length == 2 && isGroup(instructions[1])) {
                         group = instructions[1];
                     }
                 }
@@ -99,6 +99,8 @@ public class Bot extends TelegramLongPollingBot {
                     text = null;
                     System.out.println(ex.getMessage());
                 }
+                if (text != null)
+                    text = group+" "+day+"\n\n"+text;
             }
 
             if (text == null)
@@ -106,11 +108,20 @@ public class Bot extends TelegramLongPollingBot {
             tempUser.changeGroup(group);
             tempUser.changeDay(day);
 
-
             sendMsg(message, text);
         }
+    }
 
+    public boolean isDay(String s){
+        if (s == null )
+            return false;
+        return (week.contains(s.substring(1)));
+    }
 
+    public boolean isGroup(String s){
+        if (s == null )
+            return false;
+        return (Pattern.matches("^/\\D+-\\d+$", s));
     }
 
     public String getBotUsername() {
