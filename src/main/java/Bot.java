@@ -7,19 +7,23 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Bot extends TelegramLongPollingBot {
 
     public Bot() {
     }
 
-    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание
+    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
+    Map<String, Map<String, String>> users = new HashMap<>(); //key - группа, value - словарь (день - расписание)
 
 
     public Bot(DefaultBotOptions options) {
         super(options);
         Read read = new Read();
         groupDict = read.read();
+
     }
 
     public void sendMsg(Message message, String text){
@@ -36,35 +40,49 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     public void onUpdateReceived(Update update) {
-        //Map<String, String> scheduleDictionaryKN201 = new HashMap<>(); //key - день, value - расписание
-        /*Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
-        Map<String, String> oneStringCommands = new HashMap<>();
-        Read read = new Read();
-        groupDict = read.read();
-        System.out.println(groupDict);
-        */
-
-        /*scheduleDictionaryKN201.put("monday", "schedule" );
-        groupDict.put("/kn-201", scheduleDictionaryKN201);
-        oneStringCommands.put("/help", "help");*/
         Message message = update.getMessage();
-        if (message != null && message.hasText()) {
+        if (message != null && message.hasText()) { //В чём разница?
             String instruction = message.getText().toLowerCase();
             String[] instructions = instruction.split(" ");
             String text = null;
-            if (instructions.length == 1) {
-                text = groupDict.get("commands").get(instructions[0].substring(1));
-            } else if (instructions.length == 2) {
-                String group = instructions[0];
-                String day = instructions[1];
-                try {
-                    text = groupDict.get(group.substring(1)).get(day);
+            String group = null;
+            String day = null;
+            if (Pattern.matches("^/\\D+-\\d+$",instructions[0])) {
+                group = instructions[0].substring(1);
+                if (day == null && instructions.length != 2) {
+                    text = "Enter the day of week";
                 }
-                catch (Exception ex){
-                    System.out.println(ex.getMessage());
+                else {
+                    if (instructions.length == 2) {
+                        day = instructions[1];
+                    }
+                    try {
+                        text = groupDict.get(group).get(day);
+                    } catch (Exception ex) {
+                        System.out.println(ex.getMessage());
+                    }
                 }
-
+            }else if (Pattern.matches("^/\\w+$",instructions[0])) {
+                if (instructions[0].equals("/help"))
+                    text = groupDict.get("commands").get(instructions[0].substring(1));
+                else {
+                    day = instructions[0].substring(1);
+                    if (group == null && instructions.length != 2) { // problem should be : group == null
+                        text = "Enter the group";
+                    } else {
+                        if (instructions.length == 2) {
+                            group = instructions[1];
+                        }
+                        try {
+                            text = groupDict.get(group).get(day);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                }
             }
+
+            else
             if (text == null)
                 text = "Are you sure?";
             sendMsg(message, text);
@@ -78,6 +96,6 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     public String getBotToken() {
-        return "797400700:AAH-3KwxKz6JFKNSxTIPbd1xkjWWQku1Tcs";
+        return "0";
     }
 }
