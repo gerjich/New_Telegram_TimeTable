@@ -5,6 +5,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -16,14 +19,15 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
-    Map<String, Map<String, String>> users = new HashMap<>(); //key - группа, value - словарь (день - расписание)
+    ArrayList<User> users = new ArrayList<>();
+    ArrayList<String> week = new ArrayList<>();
 
 
     public Bot(DefaultBotOptions options) {
         super(options);
         Read read = new Read();
         groupDict = read.read();
-
+        week.addAll(Arrays.asList("monday", "tuesday", "wednesday" ));
     }
 
     public void sendMsg(Message message, String text){
@@ -41,50 +45,68 @@ public class Bot extends TelegramLongPollingBot {
 
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
-        if (message != null && message.hasText()) { //В чём разница?
+        if (message != null && message.hasText()) {
             String instruction = message.getText().toLowerCase();
             String[] instructions = instruction.split(" ");
             String text = null;
             String group = null;
             String day = null;
-            if (Pattern.matches("^/\\D+-\\d+$",instructions[0])) {
+            User tempUser = null;
+            Long chatID = message.getChatId();
+
+            for (User user:users) {
+                if (user.ID.equals(chatID)) {
+                    tempUser = user;
+                    group = tempUser.Group;
+                    day = tempUser.Day;
+                    break;
+                }
+            }
+            if (tempUser == null){
+                tempUser = new User();
+                tempUser.setID(chatID);
+                users.add(tempUser);
+            }
+
+            if (groupDict.get("commands").containsKey(instructions[0].substring(1))){
+                text = groupDict.get("commands").get(instructions[0].substring(1));
+            }
+            else if (Pattern.matches("^/\\D+-\\d+$",instructions[0])) {
                 group = instructions[0].substring(1);
-                if (day == null && instructions.length != 2) {
+                if (day == null ) {
                     text = "Enter the day of week";
                 }
                 else {
                     if (instructions.length == 2) {
                         day = instructions[1];
                     }
-                    try {
-                        text = groupDict.get(group).get(day);
-                    } catch (Exception ex) {
-                        System.out.println(ex.getMessage());
-                    }
                 }
-            }else if (Pattern.matches("^/\\w+$",instructions[0])) {
-                if (instructions[0].equals("/help"))
-                    text = groupDict.get("commands").get(instructions[0].substring(1));
-                else {
-                    day = instructions[0].substring(1);
-                    if (group == null && instructions.length != 2) { // problem should be : group == null
-                        text = "Enter the group";
-                    } else {
-                        if (instructions.length == 2) {
-                            group = instructions[1];
-                        }
-                        try {
-                            text = groupDict.get(group).get(day);
-                        } catch (Exception ex) {
-                            System.out.println(ex.getMessage());
-                        }
+            }else {
+                day = instructions[0].substring(1);
+                if (group == null) {
+                    text = "Enter the group";
+                } else {
+                    if (instructions.length == 2) {
+                        group = instructions[1];
                     }
                 }
             }
 
-            else
+            if (text == null) {
+                try {
+                    text = groupDict.get(group).get(day);
+                } catch (Exception ex) {
+                    text = null;
+                    System.out.println(ex.getMessage());
+                }
+            }
+
             if (text == null)
                 text = "Are you sure?";
+            tempUser.changeGroup(group);
+            tempUser.changeDay(day);
+
+
             sendMsg(message, text);
         }
 
@@ -96,6 +118,6 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     public String getBotToken() {
-        return "0";
+        return "797400700:AAH-3KwxKz6JFKNSxTIPbd1xkjWWQku1Tcs";
     }
 }
