@@ -1,0 +1,13 @@
+/monday
+monday for group kn-202
+/tuesday
+tuesday for group kn-202
+/wednesday
+wednesday for group kn-202
+/thursday
+thursday for group kn-202
+/friday
+friday for group kn-202
+/sunday
+sunday for group kn-202
+/
