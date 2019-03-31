@@ -92,123 +92,129 @@ public class Bot extends TelegramLongPollingBot {
                     text = "wrong password";
                 }
             }
-            else if (isGroup(instructions[0])) {
-                group = instructions[0].substring(1);
-                if (day == null ) {
-                    text = "Enter the day of week";
-                }
-                else {
-                    if (instructions.length == 2 && isDay(instructions[1])) {
-                        day = instructions[1];
-                    }
-                }
-            }
-            else if (isDay(instructions[0])){
-                day = instructions[0].substring(1);
-                if (group == null) {
-                    text = "Enter the group";
-                } else {
-                    if (instructions.length == 2 && isGroup(instructions[1])) {
-                        group = instructions[1];
-                    }
-                }
+            else if (isGroup(instructions[0]) || isDay(instructions[0])){
+                text = getTimeTable(instructions, tempUser);
             }
             else if (("/show".equals(instructions[0])) && (instructions.length == 3)) {
-                if ((isDate(instructions[1])) && (isLesson(instructions[2]))) {
-                    date = instructions[1];
-                    //try{
-                    lesson = Integer.parseInt(instructions[2]);
-                    text = "";
-                    if (visitDict.containsKey(date)) {
-                        if (tempUser.Teacher) {
-                            Long[] students = visitDict.get(date)[lesson];
-                            text = "";
-                            for (Long i : students) {
-                                text += Long.toString(i) + "\n"; //заменить  ID на имена (пробежаться по всем User?)
-                            }
-                        }
-                        else {
-                            text = "Enter the password";
-                        }
-                    } else {
-                        text = "there were no lessons in " + date + instructions[2];
-                    }
-                    //} catch (Exception ex) {
-                    //  text = null;
-                    //System.out.println(ex.getMessage());
-                    //}
-                } else {
-                    text = "wrong data format";
-                }
+                text = showStudents(instructions, tempUser.Teacher);
             }
             else if (("/present".equals(instructions[0])) && (instructions.length == 3)) {
-                if ((isDate(instructions[1])) && isLesson(instructions[2])) {
-                    date = instructions[1];
-                    try {
-                        lesson = Integer.parseInt(instructions[2]);
-
-                        if (visitDict.containsKey(date)) {
-                            Long[][] students = visitDict.get(date);
-                            students[lesson][0] += 1;  //Добавляем количество учеников
-                            students[lesson][students[lesson][0].intValue()] = chatID; //Добавляем  ID студента
-                            text = "successfully";
-                        } else {
-                            Long[][] students = new Long[7][100];
-                            students[lesson][0] = Long.valueOf(1); //количество присутствующих
-                            students[lesson][1] = chatID; // Добавляем  ID студента
-                            visitDict.put(date, students);
-                            text = "successfully";
-                        }
-                    }
-                    catch (Exception ex) {
-
-                    }
-                } else {
-                    text = "wrong data format";
-                }
-            }
-
-            if (text == null) {
-                try {
-                    text = groupDict.get(group).get(day);
-                } catch (Exception ex) {
-                    text = null;
-                    System.out.println(ex.getMessage());
-                }
-                if (text != null)
-                    text = group+" "+day+"\n\n"+text;
+                text = present(instructions, chatID);
             }
 
             if (text == null)
                 text = "Are you sure?";
-            tempUser.changeGroup(group);
-            tempUser.changeDay(day);
 
             sendMsg(message, text);
         }
     }
+    public String showStudents(String[] instructions, Boolean isTeacher) {
+        if ((isDate(instructions[1])) && (isLesson(instructions[2]))) {
+            String date = instructions[1];
+            //try{
+            Integer lesson = Integer.parseInt(instructions[2]);
+            String text = "";
+            if (visitDict.containsKey(date)) {
+                if (isTeacher) {
+                    Long[] students = visitDict.get(date)[lesson];
+                    for (int i = 0; i < students[0]; i++) {
+                        text += Long.toString(i) + "\n"; //заменить  ID на имена (пробежаться по всем User?)
+                    }
+                    if (text == "") {
+                        return "0 \n" + "There was no one";
+                    }
+                    return text;
+                }
+                return "Enter the password";
+
+            } else {
+                return "there were no lessons in " + date + " " + instructions[2];
+            }
+            //} catch (Exception ex) {
+            //  text = null;
+            //System.out.println(ex.getMessage());
+            //}
+        }
+        return "wrong data format";
+    }
+
+    public String present(String[] instructions, Long chatID) {
+        if ((isDate(instructions[1])) && isLesson(instructions[2])) {
+            String date = instructions[1];
+            try {
+                Integer lesson = Integer.parseInt(instructions[2]);
+                if (visitDict.containsKey(date)) {
+                    Long[][] students = visitDict.get(date);
+                    students[lesson][0] += 1;  //Добавляем количество учеников
+                    students[lesson][students[lesson][0].intValue()] = chatID; //Добавляем  ID студента
+                    return "successfully";
+                } else {
+                    Long[][] students = new Long[7][100];
+                    students[lesson][0] = Long.valueOf(1); //количество присутствующих
+                    students[lesson][1] = chatID; // Добавляем  ID студента
+                    visitDict.put(date, students);
+                    return "successfully";
+                }
+            } catch (Exception ex) {
+                System.out.println(ex.getMessage());
+                return "wrong data format";
+            }
+        } else {
+            return "wrong data format";
+        }
+    }
+
+    public String getTimeTable(String[] instructions, User tempUser) {
+        String group = tempUser.Group;
+        String day = tempUser.Day;
+        String text = null;
+        if (isGroup(instructions[0])) {
+            group = instructions[0].substring(1);
+            if (day == null) {
+                text = "Enter the day of week";
+            } else {
+                if (instructions.length == 2 && isDay(instructions[1])) {
+                    day = instructions[1];
+                }
+            }
+        } else if (isDay(instructions[0])) {
+            day = instructions[0].substring(1);
+            if (group == null) {
+                text = "Enter the group";
+            } else {
+                if (instructions.length == 2 && isGroup(instructions[1])) {
+                    group = instructions[1];
+                }
+            }
+        }
+        if (text == null) {
+            try {
+                text = groupDict.get(group).get(day);
+            } catch (Exception ex) {
+                text = null;
+                System.out.println(ex.getMessage());
+            }
+            if (text != null)
+                text = group + " " + day + "\n\n" + text;
+        }
+        tempUser.changeGroup(group);
+        tempUser.changeDay(day);
+        return text;
+    }
 
     public Boolean isDate(String s){
-        if (s == null )
-            return false;
         return (Pattern.matches("^\\d{2}.\\d{2}.\\d{2}$", s));
     }
 
     public boolean isDay(String s){
-        if (s == null )
-            return false;
         return (week.contains(s.substring(1)));
     }
 
     public boolean isGroup(String s){
-        if (s == null )
-            return false;
         return (Pattern.matches("^/\\D+-\\d+$", s));
     }
 
     public boolean isLesson(String s){
-        if (s == null )
-            return false;
         return (Pattern.matches("^\\d ?$", s));
     }
 
