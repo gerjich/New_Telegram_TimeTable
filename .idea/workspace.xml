@@ -188,13 +188,13 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="1623" />
+          <entry key="java" value="1662" />
           <entry key="txt" value="20" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="1623" />
+          <entry key="JAVA" value="1662" />
           <entry key="PLAIN_TEXT" value="20" />
         </counts>
       </usages-collector>
@@ -205,10 +205,14 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/Bot.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="17">
-              <caret line="15" column="14" lean-forward="true" selection-start-line="15" selection-start-column="14" selection-end-line="15" selection-end-column="14" />
+            <state relative-caret-position="238">
+              <caret line="46" column="49" lean-forward="true" selection-start-line="46" selection-start-column="49" selection-end-line="46" selection-end-column="49" />
               <folding>
                 <element signature="imports" expanded="true" />
+                <element signature="e#7997#7998#0" expanded="true" />
+                <element signature="e#8039#8040#0" expanded="true" />
+                <element signature="e#8074#8075#0" expanded="true" />
+                <element signature="e#8144#8145#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -273,8 +277,8 @@
         <option value="$PROJECT_DIR$/FileNames/mt-202.txt" />
         <option value="$PROJECT_DIR$/FileNames/mt-302.txt" />
         <option value="$PROJECT_DIR$/FileNames/kn-202.txt" />
-        <option value="$PROJECT_DIR$/src/main/java/Bot.java" />
         <option value="$PROJECT_DIR$/src/main/java/User.java" />
+        <option value="$PROJECT_DIR$/src/main/java/Bot.java" />
       </list>
     </option>
   </component>
@@ -387,12 +391,12 @@
       <workItem from="1544558153336" duration="6579000" />
       <workItem from="1544592607248" duration="4847000" />
       <workItem from="1545193439721" duration="10390000" />
-      <workItem from="1554045919740" duration="238000" />
+      <workItem from="1554045919740" duration="1823000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="29331000" />
+    <option name="totallyTimeSpent" value="30781000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1295" height="695" extended-state="6" />
@@ -527,10 +531,14 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/Bot.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
-          <caret line="15" column="14" lean-forward="true" selection-start-line="15" selection-start-column="14" selection-end-line="15" selection-end-column="14" />
+        <state relative-caret-position="238">
+          <caret line="46" column="49" lean-forward="true" selection-start-line="46" selection-start-column="49" selection-end-line="46" selection-end-column="49" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#7997#7998#0" expanded="true" />
+            <element signature="e#8039#8040#0" expanded="true" />
+            <element signature="e#8074#8075#0" expanded="true" />
+            <element signature="e#8144#8145#0" expanded="true" />
           </folding>
         </state>
       </provider>
