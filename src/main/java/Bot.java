@@ -19,6 +19,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
+    Map<String, Long[][]> visitDict = new HashMap<>(); //key - дата, value - (номер пары - id присутствующих)
     ArrayList<User> users = new ArrayList<>();
     ArrayList<String> week = new ArrayList<>();
 
@@ -51,8 +52,11 @@ public class Bot extends TelegramLongPollingBot {
             String text = null;
             String group = null;
             String day = null;
+            String date = null;
+            Integer lesson = null;
             User tempUser = null;
             Long chatID = message.getChatId();
+
 
             for (User user:users) {
                 if (user.ID.equals(chatID)) {
@@ -71,6 +75,23 @@ public class Bot extends TelegramLongPollingBot {
             if (groupDict.get("commands").containsKey(instructions[0].substring(1))){
                 text = groupDict.get("commands").get(instructions[0].substring(1));
             }
+            else if ("/name".equals(instructions[0])){
+                String name = "";
+                for (int i = 1; i < instructions.length; i++){
+                    name += instructions[i] + " ";
+                }
+                tempUser.changeName(name);
+                text = "Your new name is " + name;
+            }
+            else if ("/password".equals(instructions[0])){
+                Boolean correct = tempUser.rights(instructions[1]);
+                if (correct){
+                    text = "correct password";
+                }
+                else{
+                    text = "wrong password";
+                }
+            }
             else if (isGroup(instructions[0])) {
                 group = instructions[0].substring(1);
                 if (day == null ) {
@@ -81,7 +102,8 @@ public class Bot extends TelegramLongPollingBot {
                         day = instructions[1];
                     }
                 }
-            }else if (isDay(instructions[0])){
+            }
+            else if (isDay(instructions[0])){
                 day = instructions[0].substring(1);
                 if (group == null) {
                     text = "Enter the group";
@@ -89,6 +111,60 @@ public class Bot extends TelegramLongPollingBot {
                     if (instructions.length == 2 && isGroup(instructions[1])) {
                         group = instructions[1];
                     }
+                }
+            }
+            else if (("/show".equals(instructions[0])) && (instructions.length == 3)) {
+                if ((isDate(instructions[1])) && (isLesson(instructions[2]))) {
+                    date = instructions[1];
+                    //try{
+                    lesson = Integer.parseInt(instructions[2]);
+                    text = "";
+                    if (visitDict.containsKey(date)) {
+                        if (tempUser.Teacher) {
+                            Long[] students = visitDict.get(date)[lesson];
+                            text = "";
+                            for (Long i : students) {
+                                text += Long.toString(i) + "\n"; //заменить  ID на имена (пробежаться по всем User?)
+                            }
+                        }
+                        else {
+                            text = "Enter the password";
+                        }
+                    } else {
+                        text = "there were no lessons in " + date + instructions[2];
+                    }
+                    //} catch (Exception ex) {
+                    //  text = null;
+                    //System.out.println(ex.getMessage());
+                    //}
+                } else {
+                    text = "wrong data format";
+                }
+            }
+            else if (("/present".equals(instructions[0])) && (instructions.length == 3)) {
+                if ((isDate(instructions[1])) && isLesson(instructions[2])) {
+                    date = instructions[1];
+                    try {
+                        lesson = Integer.parseInt(instructions[2]);
+
+                        if (visitDict.containsKey(date)) {
+                            Long[][] students = visitDict.get(date);
+                            students[lesson][0] += 1;  //Добавляем количество учеников
+                            students[lesson][students[lesson][0].intValue()] = chatID; //Добавляем  ID студента
+                            text = "successfully";
+                        } else {
+                            Long[][] students = new Long[7][100];
+                            students[lesson][0] = Long.valueOf(1); //количество присутствующих
+                            students[lesson][1] = chatID; // Добавляем  ID студента
+                            visitDict.put(date, students);
+                            text = "successfully";
+                        }
+                    }
+                    catch (Exception ex) {
+
+                    }
+                } else {
+                    text = "wrong data format";
                 }
             }
 
@@ -112,6 +188,12 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    public Boolean isDate(String s){
+        if (s == null )
+            return false;
+        return (Pattern.matches("^\\d{2}.\\d{2}.\\d{2}$", s));
+    }
+
     public boolean isDay(String s){
         if (s == null )
             return false;
@@ -122,6 +204,12 @@ public class Bot extends TelegramLongPollingBot {
         if (s == null )
             return false;
         return (Pattern.matches("^/\\D+-\\d+$", s));
+    }
+
+    public boolean isLesson(String s){
+        if (s == null )
+            return false;
+        return (Pattern.matches("^\\d ?$", s));
     }
 
     public String getBotUsername() {
