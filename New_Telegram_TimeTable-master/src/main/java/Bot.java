@@ -5,39 +5,40 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Bot extends TelegramLongPollingBot {
 
+    public Bot() {
+    }
 
-    private Map<String, Map<String, String>> GROUP_DICT = new HashMap<>();
-    //key - группа, value - словарь (день - расписание)
-    private Map<Long, User> USERS = new HashMap<>();
-    private ArrayList<String> WEEK_DAYS = new ArrayList<>();
-    private String TEXT = null;
+    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
+    Map<String, Long[][]> visitDict = new HashMap<>(); //key - дата, value - (номер пары - id присутствующих)
+    Map<Long, User> users = new HashMap<>();
+    public static final String[] WEEK_DAYS = new String[]{"monday", "tuesday", "wednesday", "thursday", "friday", "sunday"};
 
 
     public Bot(DefaultBotOptions options) {
         super(options);
-        Reader reader = new Reader();
-        GROUP_DICT = reader.read();
-        WEEK_DAYS.addAll(Arrays.asList("monday", "tuesday", "wednesday",
-                                  "thursday", "friday", "sunday"));
+        Read read = new Read();
+        groupDict = read.read();
     }
 
-    public void sendMsg(Message message, String text){
+    public void sendMsg(Message message, String text) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.enableMarkdown(true);
         sendMessage.setChatId(message.getChatId().toString());
         sendMessage.setReplyToMessageId(message.getMessageId());
         sendMessage.setText(text);
-        try{
+        try {
             execute(sendMessage);
-        } catch (TelegramApiException e){
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
@@ -47,79 +48,149 @@ public class Bot extends TelegramLongPollingBot {
         if (message != null && message.hasText()) {
             String instruction = message.getText().toLowerCase();
             String[] instructions = instruction.split(" ");
-            User tempUser = null;
+            String text = null;
+            User tempUser;
             Long chatID = message.getChatId();
 
-            if (USERS.containsKey(chatID))
-                tempUser = USERS.get(chatID);
-            else{
+
+            if (users.containsKey(chatID)) {
+                tempUser = users.get(chatID);
+            } else {
                 tempUser = new User();
-                tempUser.setId(chatID);
-                USERS.put(chatID, tempUser);
+                tempUser.setID(chatID);
+                tempUser.changeName(Long.toString(chatID));
+                users.put(chatID, tempUser);
             }
 
-            createText(instructions, tempUser);
+            if (groupDict.get("commands").containsKey(instructions[0].substring(1))) {
+                text = groupDict.get("commands").get(instructions[0].substring(1));
+            } else if ("/name".equals(instructions[0])) {
+                String name = "";
+                for (int i = 1; i < instructions.length; i++) {
+                    name += instructions[i] + " ";
+                }
+                tempUser.changeName(name);
+                text = "Your new name is " + name;
+            } else if ("/password".equals(instructions[0])) {
+                Boolean correct = tempUser.getRights(instructions[1]);
+                if (correct) {
+                    text = "correct password";
+                } else {
+                    text = "wrong password";
+                }
+            } else if (isGroup(instructions[0]) || (isDay(instructions[0]))) {
+                text = getTimeTable(instructions, tempUser);
+            } else if (("/show".equals(instructions[0])) && (instructions.length == 3)) {
+                text = showStudents(instructions, tempUser.Teacher);
+            } else if (("/present".equals(instructions[0])) && (instructions.length == 3)) {
+                text = addPresent(instructions, chatID);
+            }
 
-            sendMsg(message, TEXT);
+            if (text == null)
+                text = "Wrong input";
+
+            sendMsg(message, text);
         }
     }
 
-    public void createText (String[] instructions, User tempUser){
-        TEXT = null;
-
-        if (GROUP_DICT.get("commands").containsKey(instructions[0].substring(1))){
-            TEXT = GROUP_DICT.get("commands").get(instructions[0].substring(1));
+    public String showStudents(String[] instructions, Boolean isTeacher) {
+        if ((isDate(instructions[1])) && (isLesson(instructions[2]))) {
+            String date = instructions[1];
+            //try{
+            Integer lesson = Integer.parseInt(instructions[2]);
+            if (visitDict.containsKey(date)) {
+                if (isTeacher) {
+                    Long[] students = visitDict.get(date)[lesson];
+                    String text =  Long.toString(students[0]) + "\n";
+                    for (int i = 1; i < students[0]; i++) {
+                        text += users.get(students[i]) + "\n"; //заменяет ID на имена (через класс User)
+                    }
+                    if (text == "") {
+                        return "0 \n" + "There was no one";
+                    }
+                    return text;
+                }
+                return "Enter the password";
+            }
+            return "there were no lessons in " + date + " " + instructions[2];
         }
-        else if (isGroup(instructions[0])) {
-            changeTextForGroup(instructions, tempUser);
+        return "wrong date format";
+    }
 
-        }else if (isDay(instructions[0])){
-            changeTextForDay(instructions, tempUser);
-        }
-
-        if (TEXT == null && tempUser.day != null && tempUser.group != null) {
+    public String addPresent(String[] instructions, Long chatID) {
+        if ((isDate(instructions[1])) && isLesson(instructions[2])) {
+            String date = instructions[1];
             try {
-                TEXT = tempUser.group +" "+tempUser.day +"\n\n"+
-                        GROUP_DICT.get(tempUser.group).get(tempUser.day);
+                Integer lesson = Integer.parseInt(instructions[2]);
+                if (visitDict.containsKey(date)) {
+                    Long[][] students = visitDict.get(date);
+                    students[lesson][0] += 1;  //Добавляем количество учеников
+                    students[lesson][students[lesson][0].intValue()] = chatID; //Добавляем  ID студента
+                    return "successfully";
+                } else {
+                    Long[][] students = new Long[7][200];
+                    students[lesson][0] = Long.valueOf(1); //количество присутствующих
+                    students[lesson][1] = chatID; // Добавляем  ID студента
+                    visitDict.put(date, students);
+                    return "successfully";
+                }
             } catch (Exception ex) {
-                TEXT = null;
                 System.out.println(ex.getMessage());
+                return "wrong date format";
             }
         }
-
-        if (TEXT == null){
-            TEXT = "Are you sure?";
-        }
+        return "wrong date format";
     }
 
-    public void changeTextForGroup(String[] instructions, User tempUser) {
-        tempUser.group = instructions[0].substring(1);
-        if (tempUser.day == null) {
-            TEXT = "Enter the day of week";
-        } else {
+    public String getTimeTable(String[] instructions, User tempUser) {
+        String group = tempUser.Group;
+        String day = tempUser.Day;
+        if (isGroup(instructions[0].substring(1))) {
+            group = instructions[0].substring(1);
             if (instructions.length == 2 && isDay(instructions[1])) {
-                tempUser.day = instructions[1];
+                day = instructions[1];
+            } else if (day == null) {
+                return "Enter the day of week";
             }
-        }
-    }
-
-    public void changeTextForDay(String[] instructions, User tempUser){
-        tempUser.day = instructions[0].substring(1);
-        if (tempUser.group == null) {
-            TEXT = "Enter the group";
-        } else {
+        } else if (isDay(instructions[0].substring(1))) {
+            day = instructions[0].substring(1);
             if (instructions.length == 2 && isGroup(instructions[1])) {
-                tempUser.group = instructions[1];
+                group = instructions[1];
+            } else if (group == null) {
+                return "Enter the group";
             }
         }
+        tempUser.changeGroup(group);
+        tempUser.changeDay(day);
+        try {
+            String text = groupDict.get(group).get(day);
+            return group + " " + day + "\n\n" + text;
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+        }
+
+        return null;
     }
 
-    public boolean isDay(String s){
-        return (WEEK_DAYS.contains(s.substring(1)));
+    public Boolean isDate(String s) {
+        return (Pattern.matches("^\\d{2}.\\d{2}.\\d{2}$", s));
     }
 
-    public boolean isGroup(String s){
-        return (Pattern.matches("^/\\D+-\\d+$", s));
+    public boolean isDay(String s) {
+        for (String i:WEEK_DAYS){
+            if (i.equals(s)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isGroup(String s) {
+        return (Pattern.matches("^\\D+-\\d+$", s));
+    }
+
+    public boolean isLesson(String s) {
+        return (Pattern.matches("^\\d ?$", s));
     }
 
     public String getBotUsername() {
