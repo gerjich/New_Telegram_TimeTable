@@ -1,4 +1,4 @@
-public class User {
+publicpublic class User  {
     public static Long ID = null;
     public static String Group = null;
     public static String Day = null;
@@ -17,9 +17,11 @@ public class User {
         Day = day;
     }
 
-    public static void changeName(String name){ Name = name; }
+    public static void changeName(String name){
+        Name = name;
+    }
 
-    public static Boolean rights(String password){
+    public static Boolean getRights(String password){
         if (password.equals("12345")){
             Teacher = true;
             return true;
