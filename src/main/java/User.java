@@ -1,33 +1,33 @@
+import java.util.Set;
+
 public class User  {
     public static Long ID = null;
-    public static String Group = null;
-    public static String Day = null;
-    public static String Name = null;
-    public static Boolean Teacher = null;
+    public static String group = null;
+    public static String day = null;
+    public static String name = null;
+    public static Boolean teacher = null;
 
-    public static void setID(Long id){
+    public void setID(Long id){
         ID = id;
     }
 
-    public static void changeGroup(String group){
-        Group = group;
+    public void changeGroup(String group){
+        this.group = group;
     }
 
-    public static void changeDay(String day){
-        Day = day;
+    public void changeDay(String day){
+        this.day = day;
     }
 
-    public static void changeName(String name){
-        Name = name;
-    }
+    public void changeName(String name){ this.name = name; }
 
-    public static Boolean getRights(String password){
+    public Boolean getRights(String password){
         if (password.equals("12345")){
-            Teacher = true;
+            this.teacher = true;
             return true;
         }
         else {
-            Teacher = false;
+            this.teacher = false;
             return false;
         }
     }

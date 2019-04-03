@@ -6,7 +6,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.awt.*;
-import java.text.SimpleDateFormat;
+import java.io.File;
+import java.io.FileReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,17 +18,63 @@ public class Bot extends TelegramLongPollingBot {
     public Bot() {
     }
 
-    Map<String, Map<String, String>> groupDict = new HashMap<>(); //key - группа, value - словарь (день - расписание)
-    Map<String, Long[][]> visitDict = new HashMap<>(); //key - дата, value - (номер пары - id присутствующих)
+    Map<String, TimeTable> timeTable = new HashMap<>(); //key - группа, value - словарь (день - расписание)
+    Map<String, Log> visitLog = new HashMap<>(); //key - дата, value - (номер пары - id присутствующих)
     Map<Long, User> users = new HashMap<>();
-    Const constants = new Const();
+    StringConst strConst = new StringConst();
+
+
+    private TimeTable readOneFile (File fileName) {
+        TimeTable tt = new TimeTable();
+        try (FileReader fr = new FileReader(fileName);
+             Scanner scan = new Scanner(fr))
+        {
+            String key = "";
+            String value = "";
+            while (scan.hasNextLine()) {
+                String line = scan.nextLine();
+                if (line.startsWith("/")) {
+                    if (key != "") {
+                        tt.groupDict.put(key, value);
+                    }
+                    key = line.substring(1);
+                    value = "";
+                }
+                else {
+                    value = strConst.getAddedLine(value, line);
+                }
+            }
+            if (key != "") {
+                tt.groupDict.put(key, value);
+            }
+        }
+        catch (Exception ex){
+            System.out.println(ex.getMessage());
+        }
+        return tt;
+    }
+
+    private Map<String, TimeTable> read() {
+        Map<String, TimeTable> bigDict = new HashMap<>();
+        File dir = new File("FileNames");
+        File[] files = dir.listFiles();
+        try {
+            for (File file:files) {
+                bigDict.put(file.getName().substring(0, file.getName().length() - 4), readOneFile(file));
+            }
+        }
+
+        catch (Exception ex){
+            System.out.println(ex.getMessage());
+        }
+        return bigDict;
+    }
 
 
     public Bot(DefaultBotOptions options) {
         super(options);
-        Read read = new Read();
-        groupDict = read.read();
-        constants.makeConst();
+        timeTable = read();
+        strConst.makeConst();
     }
 
     public void sendMsg(Message message, String text) {
@@ -45,7 +92,7 @@ public class Bot extends TelegramLongPollingBot {
 
     public void onUpdateReceived(Update update) {
         Message message = update.getMessage();
-        if (message != null && message.hasText()) {
+        if (message != null && message.hasText() && message.getText().startsWith("/")) {
             String instruction = message.getText().toLowerCase().substring(1);
             String[] instructions = instruction.split(" ");
             String text = null;
@@ -53,30 +100,31 @@ public class Bot extends TelegramLongPollingBot {
 
             User tempUser = gerTempUser(chatID);
 
-            if (groupDict.get("commands").containsKey(instructions[0])) {
-                text = groupDict.get("commands").get(instructions[0]);
-            } else if ("name".equals(instructions[0])) {
-                String name = instruction.substring("name".length());
+            if (instructions[0].equals(strConst.help)) {
+                TimeTable tt = timeTable.get(strConst.commands);
+                text = tt.groupDict.get(instructions[0]);
+            } else if (strConst.name.equals(instructions[0])) {
+                String name = instruction.substring(strConst.name.length());
                 tempUser.changeName(name);
-                text = String.format("Your new name is %s", name);
+                text = strConst.getNewName(name);
 
-            } else if ("password".equals(instructions[0])) {
+            } else if (strConst.password.equals(instructions[0])) {
                 Boolean correct = tempUser.getRights(instructions[1]);
                 if (correct) {
-                    text = "correct password";
+                    text = strConst.correctPassword;
                 } else {
-                    text = "wrong password";
+                    text = strConst.wrongPassword;
                 }
             } else if (isGroup(instructions[0]) || (isDay(instructions[0]))) {
                 text = getTimeTable(instructions, tempUser);
-            } else if (("show".equals(instructions[0])) && (instructions.length == 4)) {
-                text = showStudents(instructions, tempUser.Teacher);
-            } else if (("present".equals(instructions[0])) && (instructions.length == 4)) {
+            } else if ((strConst.show.equals(instructions[0])) && (instructions.length == 4)) {
+                text = showStudents(instructions, tempUser.teacher);
+            } else if ((strConst.present.equals(instructions[0])) && (instructions.length == 4)) {
                 text = addPresent(instructions, tempUser);
             }
 
             if (text == null)
-                text = "Wrong input";
+                text = strConst.wrongIn;
 
             sendMsg(message, text);
         }
@@ -97,83 +145,79 @@ public class Bot extends TelegramLongPollingBot {
 
 
     public String showStudents(String[] instructions, Boolean isTeacher) {
-        if (isDate(instructions[1]) && isGroup(instructions[2]) && isLesson(instructions[3])) {
-            String date = String.format("%1$s %2$s", instructions[1], instructions[2]);
-
-            Integer lesson = Integer.parseInt(instructions[3]);
-            if (visitDict.containsKey(date)) {
-                if (isTeacher) {
-                    Long[] students = visitDict.get(date)[lesson];
-                    String text = Long.toString(students[0]) + "\n";
-                    for (int i = 1; i < students[0]; i++) {
-                        text = String.format("%1$s%2$s\n", text, users.get(students[i])); //заменяет ID на имена (через класс User)
-                    }
-                    if (text == "") {
-                        return "0 \n" + "There was no one";
-                    }
-                    return text;
-                }
-                return "Enter the password";
-            }
-            return "there were no lessons in " + date + " " + instructions[3];
+        if (!isTeacher) {
+            return strConst.enterPass;
         }
-        return "wrong date format";
+        if (!(isDate(instructions[1]) && isGroup(instructions[2]) && isLesson(instructions[3]))) {
+            return strConst.wrongInForm;
+        }
+
+        String date = strConst.getDate(instructions[1], instructions[2]);
+        Integer lesson = Integer.parseInt(instructions[3]);
+        if (!visitLog.containsKey(date)) {
+            return strConst.noLesson(date);
+        }
+        Log log = visitLog.get(date);
+        if (!log.lessonNumber.containsKey(lesson)) {
+            return strConst.noLesson(date);
+        }
+        String text = "";
+        for (Long l:log.lessonNumber.get(lesson)){
+            text = strConst.getAddedLine(text, users.get(l).name);
+        }
+        return text;
     }
 
+
     public String addPresent(String[] instructions, User tempUser) {
-        if (isDate(instructions[1]) && isGroup(instructions[2]) && isLesson(instructions[3])) {
-            String date = String.format("%1$s %2$s", instructions[1], instructions[2]);
-            try {
-                Integer lesson = Integer.parseInt(instructions[3]);
-                if (visitDict.containsKey(date)) {
-                    Long[][] students = visitDict.get(date);
-                    students[lesson][0] += 1;  //Добавляем количество учеников
-                    students[lesson][students[lesson][0].intValue()] = tempUser.ID; //Добавляем  ID студента
-                    if (tempUser.Name == Long.toString(tempUser.ID)) {
-                        return "Enter your name after \"/name\"";
-                    }
-                    return "You were " + date + " " + instructions[3];
-                } else {
-                    Long[][] students = new Long[7][200];
-                    students[lesson][0] = Long.valueOf(1); //количество присутствующих
-                    students[lesson][1] = tempUser.ID; // Добавляем  ID студента
-                    visitDict.put(date, students);
-                    if (tempUser.Name == Long.toString(tempUser.ID)) {
-                        return "Enter your name after \"/name\"";
-                    }
-                    return "You were " + date + " " + instructions[3];
-                }
-            } catch (Exception ex) {
-                System.out.println(ex.getMessage());
-                return "wrong date format";
-            }
+        if (!(isDate(instructions[1]) && isGroup(instructions[2]) && isLesson(instructions[3]))) {
+            return strConst.wrongInForm;
         }
-        return "wrong date format";
+        String date = strConst.getDate(instructions[1], instructions[2]);
+        Integer lesson = Integer.parseInt(instructions[3]);
+        try {
+            if (visitLog.containsKey(date)) {
+                Log log = visitLog.get(date);
+                log.addId(lesson, tempUser.ID);
+            } else {
+                Log log = new Log();
+                log.makeNewLog(lesson, tempUser.ID);
+                visitLog.put(date, log);
+            }
+            if (tempUser.name == Long.toString(tempUser.ID)) {
+                return strConst.enterName;
+            }
+            return strConst.getPresentStr(date, instructions[3]);
+
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+            return strConst.wrongInForm;
+        }
     }
 
     private String getTimeTable(String[] instructions, User tempUser) {
-        String group = tempUser.Group;
-        String day = tempUser.Day;
+        String group = tempUser.group;
+        String day = tempUser.day;
         if (isGroup(instructions[0])) {
             group = instructions[0];
             if (instructions.length == 2 && isDay(instructions[1])) {
                 day = instructions[1];
             } else if (day == null) {
-                return "Enter the day of week";
+                return strConst.enterDay;
             }
         } else if (isDay(instructions[0])) {
             day = instructions[0];
             if (instructions.length == 2 && isGroup(instructions[1])) {
                 group = instructions[1];
             } else if (group == null) {
-                return "Enter the group";
+                return strConst.enterGroup;
             }
         }
         tempUser.changeGroup(group);
         tempUser.changeDay(day);
         try {
-            String text = groupDict.get(group).get(day);
-            return group + " " + day + "\n\n" + text;
+            String text = timeTable.get(group).groupDict.get(day);
+            return strConst.getTableForm(group, day, text);
         } catch (Exception ex) {
             System.out.println(ex.getMessage());
         }
@@ -182,7 +226,7 @@ public class Bot extends TelegramLongPollingBot {
 
     private Boolean isDate(String s) {
         try {
-            constants.format.parse(s);
+            strConst.dateFormat.parse(s);
             return true;
         } catch (Exception ex) {
             return false;
@@ -190,7 +234,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private boolean isDay(String s) {
-        return constants.WEEK_DAYS.contains(s);
+        return strConst.WEEK_DAYS.contains(s);
     }
 
     private boolean isGroup(String s) {
@@ -209,3 +253,8 @@ public class Bot extends TelegramLongPollingBot {
         return "797400700:AAH-3KwxKz6JFKNSxTIPbd1xkjWWQku1Tcs";
     }
 }
+/*
+строковые константы
+формат
+
+ */
