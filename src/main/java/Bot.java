@@ -41,7 +41,7 @@ public class Bot extends TelegramLongPollingBot {
                     value = "";
                 }
                 else {
-                    value = strConst.getAddedLine(value, line);
+                    value = String.format(strConst.addedLineForm, value, line);
                 }
             }
             if (key != "") {
@@ -56,7 +56,7 @@ public class Bot extends TelegramLongPollingBot {
 
     private Map<String, TimeTable> read() {
         Map<String, TimeTable> bigDict = new HashMap<>();
-        File dir = new File("FileNames");
+        File dir = new File(strConst.fileNames);
         File[] files = dir.listFiles();
         try {
             for (File file:files) {
@@ -74,7 +74,6 @@ public class Bot extends TelegramLongPollingBot {
     public Bot(DefaultBotOptions options) {
         super(options);
         timeTable = read();
-        strConst.makeConst();
     }
 
     public void sendMsg(Message message, String text) {
@@ -106,7 +105,7 @@ public class Bot extends TelegramLongPollingBot {
             } else if (strConst.name.equals(instructions[0])) {
                 String name = instruction.substring(strConst.name.length());
                 tempUser.changeName(name);
-                text = strConst.getNewName(name);
+                text = String.format(strConst.newNameFotm, name);
 
             } else if (strConst.password.equals(instructions[0])) {
                 Boolean correct = tempUser.getRights(instructions[1]);
@@ -152,18 +151,18 @@ public class Bot extends TelegramLongPollingBot {
             return strConst.wrongInForm;
         }
 
-        String date = strConst.getDate(instructions[1], instructions[2]);
+        String date = String.format(strConst.dateGroupForm, instructions[1], instructions[2]);
         Integer lesson = Integer.parseInt(instructions[3]);
         if (!visitLog.containsKey(date)) {
-            return strConst.noLesson(date);
+            return String.format(strConst.noLessonForm, date);
         }
         Log log = visitLog.get(date);
         if (!log.lessonNumber.containsKey(lesson)) {
-            return strConst.noLesson(date);
+            return String.format(strConst.noLessonForm, date);
         }
         String text = "";
         for (Long l:log.lessonNumber.get(lesson)){
-            text = strConst.getAddedLine(text, users.get(l).name);
+            text = String.format(strConst.addedLineForm, text, users.get(l).name);
         }
         return text;
     }
@@ -173,7 +172,7 @@ public class Bot extends TelegramLongPollingBot {
         if (!(isDate(instructions[1]) && isGroup(instructions[2]) && isLesson(instructions[3]))) {
             return strConst.wrongInForm;
         }
-        String date = strConst.getDate(instructions[1], instructions[2]);
+        String date = String.format(strConst.dateGroupForm, instructions[1], instructions[2]);
         Integer lesson = Integer.parseInt(instructions[3]);
         try {
             if (visitLog.containsKey(date)) {
@@ -187,7 +186,7 @@ public class Bot extends TelegramLongPollingBot {
             if (tempUser.name == Long.toString(tempUser.ID)) {
                 return strConst.enterName;
             }
-            return strConst.getPresentStr(date, instructions[3]);
+            return String.format(strConst.presentForm, date, instructions[3]);
 
         } catch (Exception ex) {
             System.out.println(ex.getMessage());
@@ -217,7 +216,7 @@ public class Bot extends TelegramLongPollingBot {
         tempUser.changeDay(day);
         try {
             String text = timeTable.get(group).groupDict.get(day);
-            return strConst.getTableForm(group, day, text);
+            return String.format(strConst.timeTableForm, group, day, text);
         } catch (Exception ex) {
             System.out.println(ex.getMessage());
         }
