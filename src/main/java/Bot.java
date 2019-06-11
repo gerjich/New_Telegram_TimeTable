@@ -139,9 +139,7 @@ public class Bot extends TelegramLongPollingBot {
         users.put(chatID, tempUser);
 
         return tempUser;
-
     }
-
 
     public String showStudents(String[] instructions, Boolean isTeacher) {
         if (!isTeacher) {
@@ -245,15 +243,10 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     public String getBotUsername() {
-        return "ScheduleMatmehBot";
+        return "ChatBotTimeTable";
     }
 
     public String getBotToken() {
-        return "797400700:AAH-3KwxKz6JFKNSxTIPbd1xkjWWQku1Tcs";
+        return "0";
     }
 }
-/*
-строковые константы
-формат
-
- */
