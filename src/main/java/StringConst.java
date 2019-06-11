@@ -31,5 +31,4 @@ public class StringConst {
     public static final String presentForm = "You were %1$s %2$s";
     public static final String timeTableForm = "%1$s %2$s\n\n%3$s";
     public static final String addedLineForm = "%1$s\n%2$s";
-
 }
