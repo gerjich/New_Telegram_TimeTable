@@ -97,7 +97,7 @@ public class Bot extends TelegramLongPollingBot {
             String text = null;
             Long chatID = message.getChatId();
 
-            User tempUser = gerTempUser(chatID);
+            User tempUser = getTempUser(chatID);
 
             if (instructions[0].equals(strConst.help)) {
                 TimeTable tt = timeTable.get(strConst.commands);
@@ -129,7 +129,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private User gerTempUser(Long chatID) {
+    private User getTempUser(Long chatID) {
         if (users.containsKey(chatID)) {
             return users.get(chatID);
         }
